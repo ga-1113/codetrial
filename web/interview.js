@@ -6,7 +6,12 @@ import {
   reconnectCodingInterview,
 } from "./example-board.js";
 import { mountInterviewDrawer } from "./interview-drawer.js";
-import { loadJudge, loadProblem } from "./problem-data.js";
+import {
+  loadJudge,
+  loadPageMap,
+  loadPageMapForDownload,
+  loadProblem,
+} from "./problem-data.js";
 import { downloadMarkdown, reportFilename } from "./download.js";
 import { consumeSharedFocus } from "./problem-picker.js";
 import {
@@ -57,6 +62,7 @@ import {
   reportSaveStatus,
   resultsMarkup,
   runnerStatusMarkup,
+  showOriginalProblem,
 } from "./render.js";
 import {
   acceptsReport,
@@ -3465,6 +3471,9 @@ function renderReport() {
     boardPhases: [...board.snapshots],
     saveResult: null,
   });
+  void loadPageMap()
+    .then((pages) => showOriginalProblem(nodes.report, pages, problem.page))
+    .catch(() => {});
   mountBehavioralReview(nodes.report, state.transcript.values());
 }
 
@@ -3523,15 +3532,21 @@ async function saveHistory(report = state.report) {
   return result;
 }
 
-function downloadReport() {
+async function downloadReport() {
   const at = new Date();
-  downloadMarkdown(buildMarkdown(at), reportFilename(problem.page, at));
+  const problemPages = await loadPageMapForDownload();
+  downloadMarkdown(
+    buildMarkdown(at, problemPages),
+    reportFilename(problem.page, at),
+  );
 }
 
-function buildMarkdown(at) {
+function buildMarkdown(at, problemPages) {
   return reportMarkdown({
     report: state.report,
     problemTitle: problem.title,
+    problemPage: problem.page,
+    problemPages,
     language: state.language,
     code: currentCode(),
     board: finalBoardImage(),
